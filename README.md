@@ -1,5 +1,5 @@
 # DeployingAppService
-A writeup of how to overcome some of the challenges of deploying and provisioning Microsoft App Services
+A writeup of how to overcome some of the challenges of automating the deployment and provisioning Microsoft App Services.
 by Michael Braun
 
 ## The Challenge
