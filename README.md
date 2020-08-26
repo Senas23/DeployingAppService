@@ -69,7 +69,7 @@ jobs:
 ```
 Please note, the TERRAFORM variable is a Terraform API token that is stored in as a Secret in the repository.
 
-Once I had this set as my Github Action, I had to edit my Terraform playbook to point it to the Terraform Cloud workspace. I added this [main.tf](https://github.com/metalstormbass/VulnerableAzure/blob/master/main.tf). The one annoyance was that I could not use variables for this peice. For whatever reason, Terraform will not allow this.
+Once I had this set as my Github Action, I had to edit my Terraform playbook to point it to the Terraform Cloud workspace. I added this [main.tf](https://github.com/metalstormbass/VulnerableAzure/blob/master/main.tf). I suggest adding a new file with this information so that it is easy to identify and modify. The one annoyance was that I could not use variables for this peice. For whatever reason, Terraform will not allow this.
 
 ```bash
 #This info is required for Github Actions to trigger the Terraform Cloud Deployment
