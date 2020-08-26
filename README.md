@@ -151,4 +151,4 @@ I did learn (afterwards, unfortunately) that you can do empty commits by using t
 git commit --allow-empty
 ```
 ## Conclusion
-While this may not be the most elegant solution, I was happy to have solved the problem. It was a very good learning excerise and a tangential benefit was that I now had a CI/CD component to the VulnerableAzure project. This is an additional area where protections can be applied. Hopefully Terraform will add the provisioning functionality to make this process simpler. 
+While this may not be the most elegant solution, I was happy to have solved the problem. It was a very good learning excerise and a tangential benefit was that I now had a CI/CD component to the VulnerableAzure project. This is an additional area where protections can be applied. Hopefully, Terraform will add the provisioning functionality to make this process simpler. 
