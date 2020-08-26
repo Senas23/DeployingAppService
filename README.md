@@ -143,8 +143,8 @@ gunicorn --bind=0.0.0.0:8000 --chdir=/home/site/wwwroot/VulnerableWebApp/ Vulner
 While this seems simple, it took me quite a while to figure out it out. You cannot run pip on it's own and you have to be very specific with the file paths.
 
 ### Testing
-To do any testing you have to commit a change to the repository that contains the Terraform files. I did this by just editing comments in the [workflow file](https://github.com/metalstormbass/VulnerableAzure/blob/master/.github/workflows/terraform.yml). <br>
-<b> Be Aware that every commit will trigger a Terraform Apply</b><br>
+To do any testing you have to commit a change to the repository that contains the Terraform files. I did this by just editing comments in the [workflow file](https://github.com/metalstormbass/VulnerableAzure/blob/master/.github/workflows/terraform.yml). <br><br>
+<b> Be Aware that every commit will trigger a Terraform Apply</b><br><br>
 
 I did learn (afterwards, unfortunately) that you can do empty commits by using this command:
 ```bash
