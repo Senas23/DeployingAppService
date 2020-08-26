@@ -17,7 +17,7 @@ The reason I chose these three components, is I though they would be an interest
 While all of the components were not to difficult to build (with some research), I came accross an interesting limitation in Terraform. From what I could tell, you can build the app service with Terraform, but you cannot provision the app. 
 
 ## The Solution
-I wanted a solution that did not involve running anything on my computer. So after some brainstorming, I decided this would be a good opportunity to use Github Actions to orchestrate the commands. 
+I wanted a solution that did not involve running anything on my computer. Furthermore, I wanted it to be "templatetized" so that nothing needed to be hardcoded. So after some brainstorming, I decided this would be a good opportunity to use Github Actions to orchestrate the commands. 
 
 ### Step 1 - Configure Github Actions to run Terraform
 Initially, I was using [Terraform Cloud](https://terraform.io) to run the playbooks. I connected Terraform Cloud to Github, so that every commit to Github would trigger a Terraform plan. The first challenge was to figure out how to transfer this task to Github Actions. To resolve, I found the [workflow YAML for Github Actions](https://www.terraform.io/docs/github-actions/setup-terraform.html). I modified it to look like this: 
@@ -67,9 +67,9 @@ jobs:
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: terraform apply -auto-approve
 ```
-Please note, the ${{ secrets.TERRAFORM }} is a Terraform API token that is stored in as a Secret in the repository.
+Please note, the TERRAFORM is a Terraform API token that is stored in as a Secret in the repository.
 
-Once I had this set as my Github Action, I had to edit my Terraform playbook to point it to the Terraform Cloud workspace. I added this [main.tf](https://github.com/metalstormbass/VulnerableAzure/blob/master/main.tf).
+Once I had this set as my Github Action, I had to edit my Terraform playbook to point it to the Terraform Cloud workspace. I added this [main.tf](https://github.com/metalstormbass/VulnerableAzure/blob/master/main.tf). The one annoyance was that I could not use variables for this peice. For whatever reason, Terraform will not allow this.
 
 ```bash
 #This info is required for Github Actions to trigger the Terraform Cloud Deployment
@@ -91,4 +91,26 @@ The final peice of this is to sever the connection between Terraform Cloud and G
 After creating this configuration, Terraform runs on Github Action, but the variables and state file are stored in Terraform Cloud. This way, I can configure the variables and secrets in Terraform Cloud and don't have to worry about hard coding them into the Github actions workflow. Also, because the state file is stored in Terraform cloud, I can trigger the destroy from there.
 
 ### Step 2 - Gather information from Terraform for provisioning
-The next challenge
+The next challenge was how to gather the contents of a Terraform variable and pass it to the AZ command to provision the application. I decided that the easiest way to do this would be a REST API call to Terraform Cloud. Documentation for that is located [her](https://www.terraform.io/docs/cloud/api/variables.html. <br>
+
+Here is the code that I came up with:
+
+```bash
+   #API Call to Terraform.io to get app-services name
+    - name: Get App Variable Name
+      run: |
+           out=$(curl --header "Authorization: Bearer ${{ secrets.TERRAFORM }}" --header "Content-Type: application/vnd.api+json" ${{ secrets.TF_ENV }} | jq -c --arg key "victim-company" '.data[].attributes | select (.key=="victim_company") | .value')
+           out=$(echo $out | tr -d \")
+           out1="$out-app-service"
+           out2="$out-rg"
+           echo ::set-env name=APP_NAME::$(echo $out1)
+           echo ::set-env name=RG::$(echo $out2)
+```
+
+The first thing to note, is that I am passing two variables to my cURL command:<br>
+TERRAFORM: This is the Terraform API key.  <br>
+TF_ENV: This is the workspace URL. Example: https://app.terraform.io/api/v2/workspaces/INSERT_WORKSPACE_ID_HERE <br>
+
+This API call lists all of the variables in the workspace. I then used JQ to find the correct value. Finally, I had to manipulate the variables to match the naming convention I defined withing my terraform files.
+
+### Step 3 - Use AZ to provision AppServices
