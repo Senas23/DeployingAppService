@@ -11,7 +11,7 @@ After doing some initial research on some scenarios, I decided that the first ve
 2. Azure Kubernetes Service with a Vulnerable container image <br>
 3. Azure App Service with a terrible Django app. [Located Here](https://github.com/metalstormbass/VulnerableWebApp) <br>
 
-The reason I chose these three components, is I though they would be an interesting way to explore attacking and defending Azure Services. 
+The reason I chose these three components, is I though they would be an interesting way to explore attacking and defending Azure Services.
 
 ## The Problem
 While all of the components were not to difficult to build (with some research), I came accross an interesting limitation in Terraform. From what I could tell, you can build the app service with Terraform, but you cannot provision the app. 
@@ -111,6 +111,44 @@ The first thing to note, is that I am passing two variables to my cURL command:<
 TERRAFORM: This is the Terraform API key.  <br>
 TF_ENV: This is the workspace URL. Example: https://app.terraform.io/api/v2/workspaces/INSERT_WORKSPACE_ID_HERE <br>
 
-This API call lists all of the variables in the workspace. I then used JQ to find the correct value. Finally, I had to manipulate the variables to match the naming convention I defined withing my terraform files.
+This API call lists all of the variables in the workspace. I then used JQ to find the correct value. The output value had to then be manipulated to match the naming convention I defined withing my terraform files. FInally, I set the two final values as environment variables that I could then pass on to the next step. 
 
 ### Step 3 - Use AZ to provision AppServices
+The final step was to provision the application through AZ. This was the most challenging step for me. Here is the code:
+
+```bash
+#Use AZ to provision webapp     
+    - name: Deploy app using AZ
+      run: |
+           #Login to Azure
+           az login  --service-principal -u ${{ secrets.AZ_ID }} -p ${{ secrets.AZ_SECRET }} -t ${{ secrets.AZ_TENANT }}
+           az webapp deployment source config --name ${{ env.APP_NAME}} --resource-group ${{ env.RG }} --repo-url https://github.com/metalstormbass/VulnerableWebApp.git --branch master --manual-integration                     
+           az webapp config set -g ${{ env.RG }} -n ${{ env.APP_NAME}} --startup-file /home/site/wwwroot/VulnerableWebApp/startup.sh
+```
+First, I needed to login with AZ. The variables are:<br>
+AZ_ID = Azure Client ID<br>
+AZ_SECRET = Azure Client Secret<br>
+AZ_TENANT = Directory(Tenant) ID<br>
+
+Then, I used the environment variables defined in Step 2 to confiure the source of my AppService. I pointed it to the repository for my terrible web app. This could easily be modified to be a variable if required.
+
+The last line of code is configurign the app to reference a startup script. After a lot of testing a learned that app services is just a docker instance that exposes the internal port 8000 and acts as a NGINX equivalent to pass incomming external traffic on port 80 to port 8000. It is important to note, the startup.sh file lives in the web application repository.
+
+Here is the code:
+```bash
+python -m  pip install -r /home/site/wwwroot/VulnerableWebApp/requirements.txt
+
+gunicorn --bind=0.0.0.0:8000 --chdir=/home/site/wwwroot/VulnerableWebApp/ VulnerableWebApp.wsgi
+```
+While this seems simple, it took me quite a while to figure out it out. You cannot run pip on it's own and you have to be very specific with the file paths.
+
+### Testing
+To do any testing you have to commit a change to the repository that contains the Terraform files. I did this by just editing comments in the [workflow file](https://github.com/metalstormbass/VulnerableAzure/blob/master/.github/workflows/terraform.yml). <br>
+<b> Be Aware that every commit will trigger a Terraform Apply</b><br>
+
+I did learn (afterwards, unfortunately) that you can do empty commits by using this command:
+```bash
+git commit --allow-empty
+```
+## Conclusion
+While this may not be the most elegant solution, I was happy to have solved the problem. It was a very good learning excerise and a tangential benefit was that I now had a CI/CD component to the VulnerableAzure project. This is an additional area where protections can be applied. Hopefully Terraform will add the provisioning functionality to make this process simpler. 
