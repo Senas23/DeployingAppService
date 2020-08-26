@@ -3,7 +3,7 @@ A writeup of how to overcome some of the challenges of deploying and provisionin
 by Michael Braun
 
 ## The Challenge
-After seeing many of the very interesting vulnerable by design projects for AWS, such as [CloudGOAT](https://github.com/RhinoSecurityLabs/cloudgoat), I noticed there were no real equivalents in Azure. I saw this as an opportunity to challenge myself to learn a bit more about Terraform and Azure. The first release can be found [here](https://github.com/metalstormbass/VulnerableAzure).
+After seeing many of the very interesting vulnerable by design projects for AWS, such as [CloudGOAT](https://github.com/RhinoSecurityLabs/cloudgoat), I noticed there were no real equivalents in Azure. I saw this as an opportunity to challenge myself to learn a bit more about Terraform and Azure. The first release of the VulnerableAzure project can be found [here](https://github.com/metalstormbass/VulnerableAzure). All of the code in this document comes from that repository.
 
 After doing some initial research on some scenarios, I decided that the first version should have the following components:
 <br>
@@ -14,9 +14,12 @@ After doing some initial research on some scenarios, I decided that the first ve
 The reason I chose these three components, is I though they would be an interesting way to explore attacking and defending Azure Services. 
 
 ## The Problem
-While all of the components were not to difficult to build (with some research), I came accross an interesting limitation in Terraform. From what I could tell, you can build the app service with Terraform, but you cannot provision the app. So after some brainstorming, I decided this would be a good opportunity to use Github Actions to orchestrate the commands.
+While all of the components were not to difficult to build (with some research), I came accross an interesting limitation in Terraform. From what I could tell, you can build the app service with Terraform, but you cannot provision the app. 
 
 ## The Solution
+I wanted a solution that did not involve running anything on my computer. So after some brainstorming, I decided this would be a good opportunity to use Github Actions to orchestrate the commands. 
+
+### Step 1 - Configure Github Actions to run Terraform
 Initially, I was using [Terraform Cloud](https://terraform.io) to run the playbooks. I connected Terraform Cloud to Github, so that every commit to Github would trigger a Terraform plan. The first challenge was to figure out how to transfer this task to Github Actions. To resolve, I found the [workflow YAML for Github Actions](https://www.terraform.io/docs/github-actions/setup-terraform.html). I modified it to look like this: 
 
 ```bash
@@ -63,7 +66,8 @@ jobs:
     - name: Terraform Apply
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: terraform apply -auto-approve
-'''
+```
+Please note, the ${{ secrets.TERRAFORM }} is a Terraform API token that is stored in as a Secret in the repository.
 
 Once I had this set as my Github Action, I had to edit my Terraform playbook to point it to the Terraform Cloud workspace. I added this [main.tf](https://github.com/metalstormbass/VulnerableAzure/blob/master/main.tf).
 
@@ -83,3 +87,8 @@ terraform {
      }
 ```
 The final peice of this is to sever the connection between Terraform Cloud and Github. This will allow GitHub Actions to plan and apply the changes.
+
+After creating this configuration, Terraform runs on Github Action, but the variables and state file are stored in Terraform Cloud. This way, I can configure the variables and secrets in Terraform Cloud and don't have to worry about hard coding them into the Github actions workflow. Also, because the state file is stored in Terraform cloud, I can trigger the destroy from there.
+
+### Step 2 - Gather information from Terraform for provisioning
+The next challenge
